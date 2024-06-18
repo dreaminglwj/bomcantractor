@@ -38,7 +38,8 @@ func main() {
 	// ToDo：从命令行读取路径
 
 	// 读取目录下的所有bom文件名
-	folder := "C:\\work\\willingCarPCB\\bom"
+	// folder := "C:\\work\\willingCarPCB\\bom"
+	folder := "/Users/luwenjin/work/willing/willingCarPCB/bom"
 	files := readFolder(folder)
 
 	// 读取所有bom数据，并进行整理
@@ -63,7 +64,7 @@ func readFolder(path string) []string {
 
 	for _, file := range files {
 		// logrus.Infof("files: %+v\n", file)
-		filePath := fmt.Sprintf("%s\\%s", path, file.Name())
+		filePath := fmt.Sprintf("%s/%s", path, file.Name())
 		if strings.HasSuffix(filePath, ".csv") {
 			logrus.Infof("%s\n", filePath)
 			filePaths = append(filePaths, filePath)
@@ -147,7 +148,7 @@ func mapToSlice() []*bomRecord {
 
 func saveBomToCSV(path string, bombomRecords []*bomRecord) {
 	now := time.Now()
-	csvName := fmt.Sprintf("%s\\bom-%s.csv", path, now.Format("20060102150405"))
+	csvName := fmt.Sprintf("%s/bom-%s.csv", path, now.Format("20060102150405"))
 
 	file, err := os.OpenFile(csvName, os.O_RDWR|os.O_CREATE, os.ModePerm)
 	if err != nil {
