@@ -4,12 +4,18 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/gocarina/gocsv"
 	"github.com/sirupsen/logrus"
+)
+
+const (
+	timeFormatStr string = "20060102150405"
+	osWindowsStr  string = "windows"
 )
 
 type bomRecord struct {
@@ -20,9 +26,29 @@ type bomRecord struct {
 	Qty       int32
 	DNP       string
 	// Modul string
+	FootprintAlias string
 }
 
 var indexByFootprintComponents = []string{"Willing_Library:paimu", "Willing_Library:niujiao", "Connector_PinHeader"}
+
+var footprintTrasnlate = map[string]string{
+	"Capacitor_SMD:C_0603_1608Metric":                          "0603",
+	"Capacitor_SMD:C_0805_2012Metric":                          "0805",
+	"Capacitor_SMD:C_1206_3216Metric":                          "1206",
+	"Resistor_SMD:R_0603_1608Metric":                           "0603",
+	"Resistor_SMD:R_0805_2012Metric":                           "0805",
+	"Resistor_SMD:R_1206_3216Metric":                           "1206",
+	"Resistor_SMD:R_1206_3216Metric_Pad1.30x1.75mm_HandSolder": "1206",
+	"LED_SMD:LED_0402_1005Metric":                              "0402",
+	"LED_SMD:LED_0603_1608Metric":                              "0603",
+	"LED_SMD:LED_0603_1608Metric_Pad1.05x0.95mm_HandSolder":    "0603",
+	"LED_SMD:LED_0805_2012Metric":                              "0805",
+	"LED_SMD:LED_1206_3216Metric":                              "1206",
+	// "":                                                         "",
+	// "":                                                         "",
+	// "":                                                         "",
+	// "":                                                         "",
+}
 
 var bomMap map[string]*bomRecord
 
@@ -38,8 +64,14 @@ func main() {
 	// ToDo：从命令行读取路径
 
 	// 读取目录下的所有bom文件名
-	// folder := "C:\\work\\willingCarPCB\\bom"
-	folder := "/Users/luwenjin/work/willing/willingCarPCB/bom"
+	// folder := "C:\\work\\willingCarPCB\\bom"  // C:\work\willingCarPCB\bom
+	folder := os.Args[1]
+
+	// folder := "/Users/luwenjin/work/willing/willingCarPCB/bom"
+	if len(folder) <= 0 {
+		logrus.Error("invaild path\n")
+		return
+	}
 	files := readFolder(folder)
 
 	// 读取所有bom数据，并进行整理
@@ -65,6 +97,10 @@ func readFolder(path string) []string {
 	for _, file := range files {
 		// logrus.Infof("files: %+v\n", file)
 		filePath := fmt.Sprintf("%s/%s", path, file.Name())
+		if runtime.GOOS == osWindowsStr {
+			filePath = fmt.Sprintf("%s\\%s", path, file.Name())
+		}
+
 		if strings.HasSuffix(filePath, ".csv") {
 			logrus.Infof("%s\n", filePath)
 			filePaths = append(filePaths, filePath)
@@ -96,6 +132,8 @@ func readbom(fileName string) {
 		if !indexByFootprint(record.Footprint) {
 			key = fmt.Sprintf("%s-%s", record.Footprint, record.Value)
 		}
+
+		record.FootprintAlias = footprintTrasnlate[record.Footprint]
 
 		mapRecord := bomMap[key]
 		if mapRecord != nil {
@@ -148,7 +186,10 @@ func mapToSlice() []*bomRecord {
 
 func saveBomToCSV(path string, bombomRecords []*bomRecord) {
 	now := time.Now()
-	csvName := fmt.Sprintf("%s/bom-%s.csv", path, now.Format("20060102150405"))
+	csvName := fmt.Sprintf("%s/bom-%s.csv", path, now.Format(timeFormatStr))
+	if runtime.GOOS == osWindowsStr {
+		csvName = fmt.Sprintf("%s\\bom-%s.csv", path, now.Format(timeFormatStr))
+	}
 
 	file, err := os.OpenFile(csvName, os.O_RDWR|os.O_CREATE, os.ModePerm)
 	if err != nil {
